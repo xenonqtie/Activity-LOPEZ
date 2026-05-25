@@ -10,7 +10,7 @@ public class FlameTurret : BaseTurret
     private float nextFireTime;
 
     protected override void DrawRange()
-    {   // Draws a "V" shape cone on the ground to show the range
+    {   
         lineRenderer.positionCount = 3;
         Vector3 leftEdge = Quaternion.Euler(0, -coneAngle, 0) * Vector3.forward * range;
         Vector3 rightEdge = Quaternion.Euler(0, coneAngle, 0) * Vector3.forward * range;
@@ -22,38 +22,70 @@ public class FlameTurret : BaseTurret
 
     protected override void Attack()
     {
-        if (!isActive || player == null) return;
+        if (!isActive) return;
 
-        if (PlayerRange())
+        Transform currentTarget = GetPriorityTarget();
+        if (currentTarget == null) return;
+
+        Vector3 dirToTarget = (currentTarget.position - transform.position).normalized;
+        dirToTarget.y = 0;
+        Quaternion lookRotation = Quaternion.LookRotation(dirToTarget); 
+        transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * rotationSpeed);
+
+        float angleToTarget = Vector3.Angle(transform.forward, dirToTarget);
+
+        if (angleToTarget < coneAngle)
         {
-            Vector3 dirToPlayer = (player.position - transform.position).normalized;
-            dirToPlayer.y = 0;
-            Quaternion lookRotation = Quaternion.LookRotation(dirToPlayer); // rotate the turret toward the player's position
-            transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * rotationSpeed);
-
-            float angleToPlayer = Vector3.Angle(transform.forward, dirToPlayer);
-
-            if (angleToPlayer < coneAngle)
+            if (Time.time >= nextFireTime)
             {
-                if (Time.time >= nextFireTime)
-                {
-                    FireFlame();
-                    nextFireTime = Time.time + fireRate;
-                }
+                FireFlame();
+                nextFireTime = Time.time + fireRate;
             }
         }
     }
 
     void FireFlame()
     {
+        if (bulletPrefab == null) return;
+
         float randomSpread = Random.Range(-5f, 5f);
         Quaternion bulletRotation = transform.rotation * Quaternion.Euler(0, randomSpread, 0);
 
         VisualBullet tempBullet = Instantiate(bulletPrefab, transform.position, bulletRotation);
+        tempBullet.transform.parent = null; 
         tempBullet.gameObject.SetActive(true);
         
         tempBullet.speed = 20f; 
-        Destroy(tempBullet.gameObject, 1.5f); 
+        tempBullet.maxDistance = range; 
+    }
+
+    private Transform GetPriorityTarget()
+    {
+        if (player != null)
+        {
+            float distToPlayer = Vector3.Distance(transform.position, player.position);
+            if (distToPlayer <= range)
+            {
+                return player; 
+            }
+        }
+
+        Transform closestCreature = null;
+        float closestDistance = range;
+
+        CreatureMovement[] activeCreatures = FindObjectsByType<CreatureMovement>(FindObjectsSortMode.None);
+        foreach (CreatureMovement creature in activeCreatures)
+        {
+            if (creature == null) continue;
+            float distToCreature = Vector3.Distance(transform.position, creature.transform.position);
+            if (distToCreature < closestDistance)
+            {
+                closestDistance = distToCreature;
+                closestCreature = creature.transform;
+            }
+        }
+
+        return closestCreature;
     }
 
     void Update() => Attack();

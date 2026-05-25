@@ -4,8 +4,12 @@ using UnityEngine.SceneManagement;
 
 public class PlayerMovement : MonoBehaviour
 {
+    [Header("Movement")]
     public float moveSpeed = 7f;
     public bool hasWon = false;
+
+    [Header("Health Pool")]
+    public int currentHP = 20;
 
     void Update()
     {
@@ -24,10 +28,23 @@ public class PlayerMovement : MonoBehaviour
         Vector3 moveDir = new Vector3(x, 0, z).normalized;
         transform.Translate(moveDir * moveSpeed * Time.deltaTime, Space.World);
     }
+    public void TakeDamage(int amount)
+    {
+        if (hasWon) return;
+
+        currentHP -= amount;
+        Debug.Log($"[PLAYER] Hit by creature! Remaining HP: {currentHP}/20");
+
+        if (currentHP <= 0)
+        {
+            currentHP = 0;
+            Die();
+        }
+    }
 
     public void Die()
     {
-        // Restarts the level
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        Debug.Log("[PLAYER] HP hit 0.");
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }

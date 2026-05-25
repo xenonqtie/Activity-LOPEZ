@@ -30,7 +30,7 @@ public class SniperTurrent : BaseTurret
         if (PlayerRange())
         {
 
-            Vector3 dirToPlayer = (player.position - transform.position).normalized; // Draws a single straight line forward to represent the sniper's sight
+            Vector3 dirToPlayer = (player.position - transform.position).normalized; // Draws a single straight line forward 
             dirToPlayer.y = 0; 
             Quaternion lookRotation = Quaternion.LookRotation(dirToPlayer);
             transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * lockOnSpeed);

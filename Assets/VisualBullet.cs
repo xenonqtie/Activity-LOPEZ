@@ -4,13 +4,23 @@ public class VisualBullet : MonoBehaviour
 {
     public float speed = 40f;
     public float maxDistance = 30f;
+    
+    [Header("Pure Transform Hit Detection")]
+    public float creatureKillDistance = 0.6f;
+    public float playerKillDistance = 0.5f; 
     private Vector3 spawnPoint;
+    private Transform playerTransform;
+
     void Start()
     {
-
         if (transform.parent != null) 
         {
             gameObject.SetActive(false);
+        }
+        GameObject playerObj = GameObject.FindWithTag("Player");
+        if (playerObj != null)
+        {
+            playerTransform = playerObj.transform;
         }
     }
 
@@ -26,29 +36,48 @@ public class VisualBullet : MonoBehaviour
     void Update()
     {
         transform.Translate(Vector3.forward * speed * Time.deltaTime);
+        CheckTransformCollisions();
         if (Vector3.Distance(spawnPoint, transform.position) > maxDistance)
         {
             HandleRemoval();
         }
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void CheckTransformCollisions()
     {
-        if (other.CompareTag("Player"))
+        if (playerTransform != null)
         {
-            PlayerMovement playerScript = other.GetComponent<PlayerMovement>();
-            
-            if (playerScript != null)
+            float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
+            if (distanceToPlayer <= playerKillDistance)
             {
-                Debug.Log("Bullet Hit Player!");
-                playerScript.Die(); 
+                PlayerMovement playerScript = playerTransform.GetComponent<PlayerMovement>();
+                if (playerScript != null)
+                {
+                    Debug.Log("[TURRET] Bullet scored a direct hit on the Player!.");
+                    playerScript.Die();
+                }
+                HandleRemoval();
+                return; 
             }
-            
-            HandleRemoval();
+        }
+        CreatureMovement[] activeCreatures = FindObjectsByType<CreatureMovement>(FindObjectsSortMode.None);
+        foreach (CreatureMovement creature in activeCreatures)
+        {
+            if (creature == null) continue;
+
+            float distanceToCreature = Vector3.Distance(transform.position, creature.transform.position);
+            if (distanceToCreature <= creatureKillDistance)
+            {
+                Debug.Log($"[TURRET] Bullet destroyed creature: {creature.gameObject.name} in one hit!");
+                
+                Destroy(creature.gameObject);
+                HandleRemoval();
+                break; 
+            }
         }
     }
 
-    void HandleRemoval() //Dhidesthe bullet or delete it entirely
+    void HandleRemoval() 
     {
         if (transform.parent != null)
         {

@@ -11,7 +11,7 @@ public class ShotgunTurret : BaseTurret
     private float nextFireTime;
 
     protected override void DrawRange()
-    {   // Draws a 360-degree circle on the floor to show the turret's reach
+    {   
         int segments = 50;
         lineRenderer.positionCount = segments + 1;
         lineRenderer.loop = true;
@@ -26,28 +26,28 @@ public class ShotgunTurret : BaseTurret
 
     protected override void Attack()
     {
-        if (!isActive || player == null) return; // Stop if turret is disabled or player is missing
+        if (!isActive) return; 
 
-        if (PlayerRange())
+        Transform currentTarget = GetPriorityTarget();
+        if (currentTarget == null) return;
+
+        Vector3 dirToTarget = (currentTarget.position - transform.position).normalized;
+        dirToTarget.y = 0; 
+
+        Quaternion lookRotation = Quaternion.LookRotation(dirToTarget);
+        transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * rotationSpeed);
+        
+        if (Time.time >= nextFireTime)
         {
-            //direction to player
-            Vector3 dirToPlayer = (player.position - transform.position).normalized;
-            dirToPlayer.y = 0; 
-
-            //rotation
-            Quaternion lookRotation = Quaternion.LookRotation(dirToPlayer);
-
-            transform.rotation = Quaternion.Slerp(transform.rotation, lookRotation, Time.deltaTime * rotationSpeed);
-            if (Time.time >= nextFireTime)
-            {
-                FireShotgun();
-                nextFireTime = Time.time + fireRate;
-            }
+            FireShotgun();
+            nextFireTime = Time.time + fireRate;
         }
     }
 
     void FireShotgun()
-    {   // Calculate the starting angle for the spread (the far left bullet)
+    {   
+        if (bulletPrefab == null) return;
+
         float startAngle = -spreadAngle / 2f;
         float angleStep = spreadAngle / (bulletCount - 1);
 
@@ -57,8 +57,39 @@ public class ShotgunTurret : BaseTurret
             Quaternion rotation = transform.rotation * Quaternion.Euler(0, currentAngle, 0);
             
             VisualBullet tempBullet = Instantiate(bulletPrefab, transform.position, rotation);
+            tempBullet.transform.parent = null; 
             tempBullet.gameObject.SetActive(true);
+            tempBullet.maxDistance = range; 
         }
+    }
+
+    private Transform GetPriorityTarget()
+    {
+        if (player != null)
+        {
+            float distToPlayer = Vector3.Distance(transform.position, player.position);
+            if (distToPlayer <= range)
+            {
+                return player;
+            }
+        }
+
+        Transform closestCreature = null;
+        float closestDistance = range;
+
+        CreatureMovement[] activeCreatures = FindObjectsByType<CreatureMovement>(FindObjectsSortMode.None);
+        foreach (CreatureMovement creature in activeCreatures)
+        {
+            if (creature == null) continue;
+            float distToCreature = Vector3.Distance(transform.position, creature.transform.position);
+            if (distToCreature < closestDistance)
+            {
+                closestDistance = distToCreature;
+                closestCreature = creature.transform;
+            }
+        }
+
+        return closestCreature;
     }
 
     void Update() => Attack();

@@ -34,11 +34,8 @@ public class CreatureMovement : MonoBehaviour
 
         Vector3 endPoint = targetPlayer.position;
         endPoint.y = 0; 
-
         Vector3 direction = (endPoint - startPoint).normalized;
         Vector3 perpendicular = Vector3.Cross(direction, Vector3.up).normalized;
-
-        // Uses the offset distance directly passed from the spawner profile mirror calculations
         Vector3 sideOffset = perpendicular * sideOffsetDistance;
 
         Vector3 controlPoint1 = Vector3.zero;
@@ -85,8 +82,7 @@ public class CreatureMovement : MonoBehaviour
             PlayerMovement playerScript = targetPlayer.GetComponent<PlayerMovement>();
             if (playerScript != null)
             {
-                Debug.Log("Creature caught the player!");
-                playerScript.Die();
+                playerScript.TakeDamage(1);
             }
             Destroy(gameObject);
         }
